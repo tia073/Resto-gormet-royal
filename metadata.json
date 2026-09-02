@@ -1,0 +1,6 @@
+{
+  "name": "Le Gourmet Royal",
+  "description": "Application web complète et moderne de restaurant gastronomique avec commande en ligne, réservation de table, gestion des menus et espace administrateur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
