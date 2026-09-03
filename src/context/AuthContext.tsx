@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { getOAuthRedirectTo } from '../lib/oauth';
 import { Profile, UserRole } from '../types/restaurant';
 
 interface AuthContextType {
@@ -234,24 +235,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async (): Promise<{ error?: string }> => {
     const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin,
-          },
-        });
-        if (error) return { error: error.message };
-        return {};
-      } catch (err: any) {
-        return { error: err.message || 'Erreur OAuth Google' };
-      }
-    } else {
-      // Demo fallback notification
+    if (!supabase) {
       return {
-        error: "Google OAuth nécessite une configuration Supabase active avec l'identifiant Client Google Cloud.",
+        error:
+          "Google OAuth nécessite une configuration Supabase active avec l'identifiant Client Google Cloud.",
       };
+    }
+
+    try {
+      // skipBrowserRedirect: Android Chrome often blocks the delayed default redirect.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectTo(),
+          skipBrowserRedirect: true,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (error) return { error: error.message };
+      if (!data.url) {
+        return { error: "Impossible d'obtenir l'URL de connexion Google (Supabase)." };
+      }
+
+      window.location.assign(data.url);
+      return {};
+    } catch (err: any) {
+      return { error: err.message || 'Erreur OAuth Google' };
     }
   };
 

@@ -521,7 +521,7 @@ CREATE POLICY "Admin All Reviews" ON public.reviews FOR ALL USING (public.is_adm
                   <strong className="text-stone-100">4. Configurer Supabase Auth :</strong> Dans <em>Authentication &gt; Providers</em>, vérifiez que le fournisseur Email est activé.
                 </li>
                 <li className="p-3 bg-stone-950 rounded-lg border border-stone-800">
-                  <strong className="text-stone-100">5. Configurer Google OAuth (Optionnel) :</strong> Activez le fournisseur Google dans Supabase Auth en renseignant votre Client ID & Secret Google Cloud, et définissez l'URL de redirection autorisée.
+                  <strong className="text-stone-100">5. Configurer Google OAuth (Optionnel) :</strong> Activez Google dans <em>Authentication → Providers</em>. Dans <em>Authentication → URL Configuration</em>, Site URL = l’URL publique du site, et Redirect URLs doit contenir <code className="text-amber-300">{'{origine}'}/auth/callback</code> (ex. <code className="text-amber-300">http://localhost:3000/auth/callback</code> et l’URL de production). Dans Google Cloud (client OAuth <em>Web</em>), Authorized redirect URI = <code className="text-amber-300">https://VOTRE-PROJET.supabase.co/auth/v1/callback</code> ; Authorized JavaScript origins = l’origine du site + <code className="text-amber-300">https://VOTRE-PROJET.supabase.co</code>.
                 </li>
                 <li className="p-3 bg-stone-950 rounded-lg border border-stone-800">
                   <strong className="text-stone-100">6. Récupérer les clés API :</strong> Rendez-vous dans <em>Project Settings &gt; API</em>. Copiez l'<strong>URL du projet</strong> et la <strong>Clé anonyme (anon / public)</strong>.

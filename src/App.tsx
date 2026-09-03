@@ -4,9 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import {
+  AUTH_CALLBACK_PATH,
+  formatOAuthError,
+  parseOAuthCallbackUrl,
+  persistOAuthError,
+} from './lib/oauth';
 import { Navbar } from './components/ui/Navbar';
 import { Footer } from './components/ui/Footer';
 import { CartDrawer } from './components/cart/CartDrawer';
@@ -25,13 +32,31 @@ import { RegisterView } from './components/auth/RegisterView';
 import { ProfileView } from './components/auth/ProfileView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 
+function pathFromLocation(pathname: string, search: string = ''): { path: string; orderId: string | null } {
+  const params = new URLSearchParams(search);
+  const orderParam = params.get('order');
+  if (orderParam) {
+    return { path: '/order-detail', orderId: orderParam };
+  }
+  if (pathname.startsWith('/orders/')) {
+    return { path: '/order-detail', orderId: pathname.replace('/orders/', '') };
+  }
+  const normalized = pathname.replace(/\/$/, '') || '/';
+  if (normalized === AUTH_CALLBACK_PATH) {
+    return { path: AUTH_CALLBACK_PATH, orderId: null };
+  }
+  return { path: normalized, orderId: null };
+}
+
 const AppContent: React.FC = () => {
-  const [currentPath, setCurrentPath] = useState<string>('/');
-  const [orderDetailId, setOrderDetailId] = useState<string | null>(null);
+  const initial = pathFromLocation(window.location.pathname, window.location.search);
+  const [currentPath, setCurrentPath] = useState<string>(initial.path);
+  const [orderDetailId, setOrderDetailId] = useState<string | null>(initial.orderId);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
 
   const { isCartOpen, setIsCartOpen, setTableNumber } = useCart();
   const { isSupabaseConfigured } = useRestaurant();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   // Read URL query parameters on initial load (e.g. ?table=5 or ?order=id)
   useEffect(() => {
@@ -49,13 +74,48 @@ const AppContent: React.FC = () => {
 
     // Handle back / forward browser navigation
     const handlePopState = () => {
-      const pathname = window.location.pathname || '/';
-      setCurrentPath(pathname);
+      const mapped = pathFromLocation(window.location.pathname || '/', window.location.search);
+      setOrderDetailId(mapped.orderId);
+      setCurrentPath(mapped.path);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [setTableNumber]);
+
+  // Complete Google OAuth (PKCE ?code= / hash tokens / error) after redirect
+  useEffect(() => {
+    const callback = parseOAuthCallbackUrl();
+    const isCallbackPath = callback.pathname === AUTH_CALLBACK_PATH;
+    const hasOAuthResult = Boolean(callback.code || callback.accessToken || callback.error);
+    if (!isCallbackPath && !hasOAuthResult) return;
+
+    const oauthError = formatOAuthError(callback.error, callback.errorDescription);
+    if (oauthError) {
+      persistOAuthError(oauthError);
+      window.history.replaceState({}, document.title, '/login');
+      setCurrentPath('/login');
+      return;
+    }
+
+    if (user) {
+      window.history.replaceState({}, document.title, '/');
+      setCurrentPath('/');
+      return;
+    }
+
+    if (isAuthLoading) return;
+
+    const timeout = window.setTimeout(() => {
+      persistOAuthError(
+        "La connexion Google a échoué : aucune session n'a été créée. Vérifiez les Redirect URLs dans Supabase (Authentication → URL Configuration) et l'URI de callback Google Cloud."
+      );
+      window.history.replaceState({}, document.title, '/login');
+      setCurrentPath('/login');
+    }, 4000);
+
+    return () => window.clearTimeout(timeout);
+  }, [user, isAuthLoading]);
 
   // Handle navigation
   const handleNavigate = (path: string) => {
@@ -66,11 +126,13 @@ const AppContent: React.FC = () => {
       const id = path.replace('/orders/', '');
       setOrderDetailId(id);
       setCurrentPath('/order-detail');
+      window.history.pushState({}, '', path);
       return;
     }
 
     setOrderDetailId(null);
     setCurrentPath(path);
+    window.history.pushState({}, '', path);
   };
 
   return (
@@ -115,6 +177,10 @@ const AppContent: React.FC = () => {
 
         {currentPath === '/contact' && (
           <ContactPage onNavigate={handleNavigate} />
+        )}
+
+        {currentPath === AUTH_CALLBACK_PATH && (
+          <LoadingSpinner label="Connexion Google en cours..." />
         )}
 
         {currentPath === '/login' && <LoginView onNavigate={handleNavigate} />}
