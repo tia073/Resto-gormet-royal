@@ -16,7 +16,7 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
-  const { signIn, signInWithGoogle, switchDemoRole } = useAuth();
+  const { signInWithEmail, signInWithGoogle, switchDemoRole } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,11 +28,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
     setErrorMessage(null);
     setIsLoading(true);
 
-    const res = await signIn(email.trim(), password);
+    const res = await signInWithEmail(email.trim(), password);
     setIsLoading(false);
 
-    if (!res.success) {
-      setErrorMessage(res.error || 'Identifiants invalides.');
+    if (res.error) {
+      setErrorMessage(res.error);
       return;
     }
 
