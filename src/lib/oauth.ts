@@ -1,5 +1,9 @@
 export const AUTH_CALLBACK_PATH = '/auth/callback';
+export const OAUTH_SUCCESS_PATH = '/profile';
 export const OAUTH_ERROR_STORAGE_KEY = 'oauth_error';
+
+export const SUPABASE_NOT_CONFIGURED_MESSAGE =
+  "Supabase n'est pas encore connecté. Ouvrez « Setup DB », collez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY, puis activez le fournisseur Google dans Authentication → Providers (Client ID / Secret Google Cloud).";
 
 export function getOAuthRedirectTo(): string {
   if (typeof window === 'undefined') return '';

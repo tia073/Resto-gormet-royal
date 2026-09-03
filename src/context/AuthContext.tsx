@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
-import { getOAuthRedirectTo } from '../lib/oauth';
+import {
+  formatOAuthError,
+  getOAuthRedirectTo,
+  parseOAuthCallbackUrl,
+  SUPABASE_NOT_CONFIGURED_MESSAGE,
+} from '../lib/oauth';
 import { Profile, UserRole } from '../types/restaurant';
 
 interface AuthContextType {
@@ -15,6 +20,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
   signUpWithEmail: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error?: string; message?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  completeOAuthCallback: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
   forgotPassword: (email: string) => Promise<{ error?: string; message?: string }>;
@@ -236,14 +242,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async (): Promise<{ error?: string }> => {
     const supabase = getSupabase();
     if (!supabase) {
-      return {
-        error:
-          "Google OAuth nécessite une configuration Supabase active avec l'identifiant Client Google Cloud.",
-      };
+      return { error: SUPABASE_NOT_CONFIGURED_MESSAGE };
     }
 
     try {
-      // skipBrowserRedirect: Android Chrome often blocks the delayed default redirect.
+      // skipBrowserRedirect + assign: Chrome Android often blocks the delayed default redirect.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -265,6 +268,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {};
     } catch (err: any) {
       return { error: err.message || 'Erreur OAuth Google' };
+    }
+  };
+
+  const completeOAuthCallback = async (): Promise<{ error?: string }> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      return { error: SUPABASE_NOT_CONFIGURED_MESSAGE };
+    }
+
+    const callback = parseOAuthCallbackUrl();
+    const providerError = formatOAuthError(callback.error, callback.errorDescription);
+    if (providerError) {
+      return { error: providerError };
+    }
+
+    try {
+      // detectSessionInUrl may already have exchanged the PKCE code during client init.
+      const existing = await supabase.auth.getSession();
+      if (existing.data.session) {
+        return {};
+      }
+
+      if (callback.code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(callback.code);
+        if (error) return { error: error.message };
+        return {};
+      }
+
+      return {
+        error:
+          "La connexion Google n'a pas renvoyé de code. Vérifiez Redirect URLs : " +
+          getOAuthRedirectTo(),
+      };
+    } catch (err: any) {
+      return { error: err.message || "Erreur lors de l'échange du code OAuth" };
     }
   };
 
@@ -350,6 +388,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
+        completeOAuthCallback,
         signOut,
         updateProfile,
         forgotPassword,

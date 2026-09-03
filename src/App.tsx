@@ -4,16 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
-import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
-import { LoadingSpinner } from './components/ui/LoadingSpinner';
-import {
-  AUTH_CALLBACK_PATH,
-  formatOAuthError,
-  parseOAuthCallbackUrl,
-  persistOAuthError,
-} from './lib/oauth';
+import { RestaurantProvider } from './context/RestaurantContext';
+import { AUTH_CALLBACK_PATH, OAUTH_SUCCESS_PATH } from './lib/oauth';
 import { Navbar } from './components/ui/Navbar';
 import { Footer } from './components/ui/Footer';
 import { CartDrawer } from './components/cart/CartDrawer';
@@ -30,6 +24,7 @@ import { ContactPage } from './components/pages/ContactPage';
 import { LoginView } from './components/auth/LoginView';
 import { RegisterView } from './components/auth/RegisterView';
 import { ProfileView } from './components/auth/ProfileView';
+import { AuthCallbackView } from './components/auth/AuthCallbackView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 
 function pathFromLocation(pathname: string, search: string = ''): { path: string; orderId: string | null } {
@@ -55,8 +50,6 @@ const AppContent: React.FC = () => {
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
 
   const { isCartOpen, setIsCartOpen, setTableNumber } = useCart();
-  const { isSupabaseConfigured } = useRestaurant();
-  const { user, isLoading: isAuthLoading } = useAuth();
 
   // Read URL query parameters on initial load (e.g. ?table=5 or ?order=id)
   useEffect(() => {
@@ -82,40 +75,6 @@ const AppContent: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [setTableNumber]);
-
-  // Complete Google OAuth (PKCE ?code= / hash tokens / error) after redirect
-  useEffect(() => {
-    const callback = parseOAuthCallbackUrl();
-    const isCallbackPath = callback.pathname === AUTH_CALLBACK_PATH;
-    const hasOAuthResult = Boolean(callback.code || callback.accessToken || callback.error);
-    if (!isCallbackPath && !hasOAuthResult) return;
-
-    const oauthError = formatOAuthError(callback.error, callback.errorDescription);
-    if (oauthError) {
-      persistOAuthError(oauthError);
-      window.history.replaceState({}, document.title, '/login');
-      setCurrentPath('/login');
-      return;
-    }
-
-    if (user) {
-      window.history.replaceState({}, document.title, '/');
-      setCurrentPath('/');
-      return;
-    }
-
-    if (isAuthLoading) return;
-
-    const timeout = window.setTimeout(() => {
-      persistOAuthError(
-        "La connexion Google a échoué : aucune session n'a été créée. Vérifiez les Redirect URLs dans Supabase (Authentication → URL Configuration) et l'URI de callback Google Cloud."
-      );
-      window.history.replaceState({}, document.title, '/login');
-      setCurrentPath('/login');
-    }, 4000);
-
-    return () => window.clearTimeout(timeout);
-  }, [user, isAuthLoading]);
 
   // Handle navigation
   const handleNavigate = (path: string) => {
@@ -180,10 +139,26 @@ const AppContent: React.FC = () => {
         )}
 
         {currentPath === AUTH_CALLBACK_PATH && (
-          <LoadingSpinner label="Connexion Google en cours..." />
+          <AuthCallbackView
+            onSuccess={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setCurrentPath(OAUTH_SUCCESS_PATH);
+              window.history.replaceState({}, '', OAUTH_SUCCESS_PATH);
+            }}
+            onError={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setCurrentPath('/login');
+              window.history.replaceState({}, '', '/login');
+            }}
+          />
         )}
 
-        {currentPath === '/login' && <LoginView onNavigate={handleNavigate} />}
+        {currentPath === '/login' && (
+          <LoginView
+            onNavigate={handleNavigate}
+            onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
+          />
+        )}
 
         {currentPath === '/register' && (
           <RegisterView onNavigate={handleNavigate} />

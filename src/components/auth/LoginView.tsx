@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { consumeOAuthError } from '../../lib/oauth';
 
 interface LoginViewProps {
   onNavigate: (path: string) => void;
@@ -22,13 +21,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const oauthError = consumeOAuthError();
-    if (oauthError) setErrorMessage(oauthError);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,16 +41,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
 
   const handleGoogleLogin = async () => {
     setErrorMessage(null);
-    setIsGoogleLoading(true);
     try {
       const res = await signInWithGoogle();
       if (res.error) {
         setErrorMessage(res.error);
-        setIsGoogleLoading(false);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Erreur lors de la connexion avec Google.');
-      setIsGoogleLoading(false);
     }
   };
 
@@ -132,7 +122,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
 
           <button
             type="submit"
-            disabled={isLoading || isGoogleLoading}
+            disabled={isLoading}
             className="w-full py-3 px-4 rounded-lg bg-[#C5A059] hover:bg-[#B38E47] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
           >
             {isLoading ? (
@@ -158,8 +148,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            disabled={isGoogleLoading || isLoading}
-            className="w-full py-2.5 px-4 rounded-lg bg-[#FDFCF8] hover:bg-[#F5F2ED] border border-[#E5E1D8] text-[#1A1A1A] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
+            className="w-full py-2.5 px-4 rounded-lg bg-[#FDFCF8] hover:bg-[#F5F2ED] border border-[#E5E1D8] text-[#1A1A1A] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -179,7 +168,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>{isGoogleLoading ? 'Redirection vers Google...' : 'Continuer avec Google'}</span>
+            <span>Continuer avec Google</span>
           </button>
         </div>
 
