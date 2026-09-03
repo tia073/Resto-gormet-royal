@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://resto-gormet-royal.vercel.app/sitemap.xml
