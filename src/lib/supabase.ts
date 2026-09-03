@@ -1,15 +1,27 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Retrieve environment variables for Supabase (compatible with Vite and Next.js styles)
+// Retrieve environment variables for Supabase (Vite style as primary)
 const envUrl = (import.meta.env?.VITE_SUPABASE_URL || import.meta.env?.NEXT_PUBLIC_SUPABASE_URL || '') as string;
 const envKey = (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || '') as string;
 
 // Allow local custom override if saved by user in the UI settings
-const storedUrl = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_url') || '' : '';
-const storedKey = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_anon_key') || '' : '';
+const storedUrl = typeof window !== 'undefined' ? (localStorage.getItem('custom_supabase_url') || '').trim() : '';
+const storedKey = typeof window !== 'undefined' ? (localStorage.getItem('custom_supabase_anon_key') || '').trim() : '';
 
-export const supabaseUrl = (storedUrl || envUrl || '').trim();
-export const supabaseAnonKey = (storedKey || envKey || '').trim();
+const isPlaceholder = (val?: string | null) =>
+  !val || val === 'https://your-project.supabase.co' || val === 'your-anon-public-key';
+
+// .env variables are the primary source of configuration
+const isEnvValid = Boolean(envUrl && envKey && !isPlaceholder(envUrl) && !isPlaceholder(envKey) && envUrl.startsWith('https://'));
+const isStoredValid = Boolean(storedUrl && storedKey && !isPlaceholder(storedUrl) && !isPlaceholder(storedKey) && storedUrl.startsWith('https://'));
+
+export const supabaseUrl = (
+  isStoredValid ? storedUrl : (isEnvValid ? envUrl : (storedUrl || envUrl || ''))
+).trim();
+
+export const supabaseAnonKey = (
+  isStoredValid ? storedKey : (isEnvValid ? envKey : (storedKey || envKey || ''))
+).trim();
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 

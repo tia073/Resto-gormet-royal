@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Database,
   Key,
@@ -36,6 +36,13 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({
   const [key, setKey] = useState(supabaseAnonKey);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'sql' | 'guide'>('config');
+
+  useEffect(() => {
+    if (isOpen) {
+      setUrl(supabaseUrl);
+      setKey(supabaseAnonKey);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -361,7 +368,7 @@ CREATE POLICY "Admin All Reviews" ON public.reviews FOR ALL USING (public.is_adm
                   )}
                 </div>
                 <p className="text-xs text-stone-400 leading-relaxed">
-                  L'application utilise le client officiel <code className="text-amber-300">@supabase/supabase-js</code>. Vous pouvez connecter votre propre projet Supabase en renseignant ci-dessous vos variables ou en configurant les variables d'environnement <code className="text-amber-300">NEXT_PUBLIC_SUPABASE_URL</code> et <code className="text-amber-300">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+                  L'application utilise le client officiel <code className="text-amber-300">@supabase/supabase-js</code>. Vous pouvez connecter votre propre projet Supabase en renseignant ci-dessous vos variables ou en configurant les variables d'environnement <code className="text-amber-300">VITE_SUPABASE_URL</code> et <code className="text-amber-300">VITE_SUPABASE_ANON_KEY</code>.
                 </p>
               </div>
 
@@ -369,7 +376,7 @@ CREATE POLICY "Admin All Reviews" ON public.reviews FOR ALL USING (public.is_adm
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-2">
-                    NEXT_PUBLIC_SUPABASE_URL
+                    VITE_SUPABASE_URL
                   </label>
                   <div className="relative">
                     <Database className="w-4 h-4 absolute left-3 top-3.5 text-stone-500" />
@@ -385,7 +392,7 @@ CREATE POLICY "Admin All Reviews" ON public.reviews FOR ALL USING (public.is_adm
 
                 <div>
                   <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-2">
-                    NEXT_PUBLIC_SUPABASE_ANON_KEY
+                    VITE_SUPABASE_ANON_KEY
                   </label>
                   <div className="relative">
                     <Key className="w-4 h-4 absolute left-3 top-3.5 text-stone-500" />
@@ -523,7 +530,7 @@ CREATE POLICY "Admin All Reviews" ON public.reviews FOR ALL USING (public.is_adm
                   <strong className="text-stone-100">7. Créer le premier Administrateur :</strong> Créez votre compte client normal via l'application, puis dans Supabase (<em>Table Editor &gt; profiles</em>), modifiez votre rôle de <code className="text-stone-300">customer</code> à <code className="text-amber-300">admin</code>.
                 </li>
                 <li className="p-3 bg-stone-950 rounded-lg border border-stone-800">
-                  <strong className="text-stone-100">8. Connecter l'application :</strong> Collez vos identifiants dans le formulaire de l'onglet <em>Paramètres de Connexion</em> ou dans votre fichier <code className="text-stone-300">.env</code>.
+                  <strong className="text-stone-100">8. Connecter l'application :</strong> Collez vos identifiants dans le formulaire de l'onglet <em>Paramètres de Connexion</em> ou dans votre fichier <code className="text-stone-300">.env</code> (<code className="text-amber-300">VITE_SUPABASE_URL</code> et <code className="text-amber-300">VITE_SUPABASE_ANON_KEY</code>).
                 </li>
               </ol>
             </div>
