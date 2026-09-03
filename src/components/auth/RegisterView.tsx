@@ -15,7 +15,7 @@ interface RegisterViewProps {
 }
 
 export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUpWithEmail, signInWithGoogle } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -40,11 +40,16 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
     }
 
     setIsLoading(true);
-    const res = await signUp(email.trim(), password, fullName.trim(), phone.trim());
+    const res = await signUpWithEmail(
+      email.trim(),
+      password,
+      fullName.trim(),
+      phone.trim()
+    );
     setIsLoading(false);
 
-    if (!res.success) {
-      setErrorMessage(res.error || "Erreur lors de l'inscription.");
+    if (res.error) {
+      setErrorMessage(res.error);
       return;
     }
 
